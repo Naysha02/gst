@@ -1,0 +1,98 @@
+<?php
+require_once 'functions.php';
+
+// Search query
+$search = trim($_GET['q'] ?? '');
+$where = " WHERE status='published' ";
+if ($search !== '') {
+    $s = $conn->real_escape_string($search);
+    $where .= " AND (title LIKE '%$s%' OR make LIKE '%$s%' OR model LIKE '%$s%') ";
+}
+
+// Fetch listings
+$result = $conn->query("SELECT * FROM listings $where ORDER BY created_at DESC LIMIT 100");
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>FindUsedCarz</title>
+<link rel="stylesheet" href="assets/css/style.css">
+<style>
+body { font-family: Arial, sans-serif; background:#f8f9fa; margin:0; padding:0; }
+.container { max-width:1200px; margin:20px auto; padding:0 15px; }
+.header { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; margin-bottom:20px; }
+.header a { text-decoration:none; margin-left:10px; color:#4e73df; }
+.card { background:#fff; padding:15px; border-radius:10px; margin-bottom:15px; box-shadow:0 2px 8px rgba(0,0,0,0.1); }
+.form-row { margin-bottom:10px; }
+input, select, button { padding:8px; border-radius:6px; border:1px solid #ccc; }
+button { background:#4e73df; color:#fff; border:none; cursor:pointer; transition:0.3s; }
+button:hover { background:#2e59d9; }
+.listing-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(250px,1fr)); gap:15px; }
+.thumb { width:100%; height:150px; object-fit:cover; border-radius:6px; }
+h1 a { text-decoration:none; color:#4e73df; }
+.note { text-align:center; color:#555; margin-top:20px; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<!-- Header -->
+<div class="header">
+<h1><a href="index.php">FindUsedCarz</a></h1>
+<div>
+    <a href="dealer/register.php">Dealer signup</a> |
+    <a href="dealer/login.php">Dealer login</a> |
+    <a href="customer/register.php">Customer signup</a> |
+    <a href="customer/login.php">Customer login</a> |
+    <a href="admin/login.php">Admin</a>
+</div>
+</div>
+
+<!-- Search Form -->
+<div class="card">
+<form method="GET">
+<div style="display:flex; gap:8px; flex-wrap:wrap;">
+    <input type="text" name="q" placeholder="Search make, model, title..." value="<?php echo e($search); ?>" style="flex:1;">
+    <button type="submit">Search</button>
+</div>
+</form>
+</div>
+
+<h2>Latest Listings</h2>
+<div class="listing-grid">
+<?php while ($row = $result->fetch_assoc()):
+    $imgs = $row['images'] ? json_decode($row['images'], true) : [];
+    $thumb = $imgs[0] ?? '';
+
+    if (!empty($thumb)) {
+        // Build path relative to project root for browser
+        $thumbUrl = str_replace('\\','/',$thumb);
+
+        // Optional: check file exists on server
+        if (!file_exists(__DIR__ . '/' . $thumb)) {
+            $thumbUrl = 'assets/images/no_image.png';
+        }
+    } else {
+        $thumbUrl = 'assets/images/no_image.png';
+    }
+?>
+<div class="card">
+    <img src="<?php echo e($thumbUrl); ?>" class="thumb" alt="Car Image">
+    <h3><?php echo e($row['title']); ?></h3>
+    <p><strong>AED <?php echo number_format($row['price']); ?></strong> • <?php echo e($row['year']); ?> • <?php echo e($row['mileage']); ?> km</p>
+    <p><?php echo e($row['make'].' '.$row['model']); ?></p>
+    <a href="listings/view.php?id=<?php echo $row['id']; ?>">View details</a>
+</div>
+<?php endwhile; ?>
+</div>
+
+
+
+
+<hr>
+<p class="note">Sample minimal marketplace. Use admin to approve dealers/listings.</p>
+
+</div>
+</body>
+</html>
